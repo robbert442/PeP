@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="nl" class="transition-colors duration-300">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prijstracker voor Producten</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .toggle-section-btn {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toggle-arrow {
+            transition: transform 0.3s ease-in-out;
+        }
+        .toggle-arrow.open {
+            transform: rotate(90deg);
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            color: black;
+        }
+        .message-box.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .message-box-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-zinc-900 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
+
+<div id="main-app" class="container bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-lg dark:shadow-none w-full max-w-2xl text-gray-900 dark:text-white transition-colors duration-300">
+    <!-- Header -->
+    <div class="grid grid-cols-3 items-center mb-6">
+        <div></div>
+        <div class="flex items-center justify-center">
+            <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="#3B82F6" />
+                <text x="50" y="55" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#fff" text-anchor="middle" alignment-baseline="middle">P€P</text>
+            </svg>
+        </div>
+        <div class="flex flex-col items-end space-y-2">
+            <button id="toggleThemeBtn" class="flex items-center justify-center space-x-2 text-sm font-medium p-2 rounded-lg bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-zinc-600 transition duration-300">
+                <i id="themeIcon" class="fas fa-sun"></i>
+                <span id="toggleThemeText">Donker</span>
+            </button>
+            <div id="logged-in-section" class="flex flex-col items-end space-y-2" style="display: none;">
+                <button id="logOutBtn" class="flex items-center justify-center space-x-2 text-sm font-medium p-2 rounded-lg bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-zinc-600 transition duration-300">
+                    <i class="fas fa-sign-out-alt"></i> Uitloggen
+                </button>
+            </div>
+            <div id="logged-out-section" class="flex flex-col items-end space-y-2" style="display: none;">
+                <button id="logInBtn" class="flex items-center justify-center space-x-2 text-sm font-medium p-2 rounded-lg bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition duration-300">
+                    <i class="fab fa-google"></i> Inloggen met Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Toevoegen -->
+    <div class="box bg-gray-100 dark:bg-zinc-700 p-4 rounded-xl shadow-inner dark:shadow-none mb-6 transition-colors duration-300">
+        <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Nieuw product toevoegen</h2>
+        <div class="flex flex-col sm:flex-row gap-4">
+            <input type="text" id="productInput" placeholder="Productnaam" class="flex-1 p-3 border border-gray-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-zinc-800 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white transition-colors duration-300">
+            <button id="addProductBtn" class="bg-indigo-600 text-white p-3 rounded-lg font-medium hover:bg-indigo-700 transition duration-300 ease-in-out">Toevoegen</button>
+        </div>
+    </div>
+
+    <!-- Mijn Producten -->
+    <div class="box bg-gray-100 dark:bg-zinc-700 p-4 rounded-xl shadow-inner dark:shadow-none mb-6 transition-colors duration-300">
+        <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Mijn Producten</h2>
+        <ul id="myProductsList"></ul>
+    </div>
+
+    <!-- Boodschappenlijstje -->
+    <div class="box bg-gray-100 dark:bg-zinc-700 p-4 rounded-xl shadow-inner dark:shadow-none transition-colors duration-300">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Mijn Boodschappenlijstje</h2>
+            <button id="clearShoppingListBtn" class="bg-red-600 text-white p-2 rounded-lg font-medium text-sm hover:bg-red-700 transition duration-300 ease-in-out">Lijst legen</button>
+        </div>
+        <p id="lastUpdated" class="text-sm text-gray-500 dark:text-gray-400 text-right mb-4 transition-colors duration-300" style="display:none;"></p>
+        <ul id="shoppingList" class="space-y-4"></ul>
+        <div id="shoppingListContainer" style="display: none;" class="mt-6 pt-4 border-t-2 border-dashed border-gray-300 dark:border-zinc-600 transition-colors duration-300">
+            <div class="flex justify-between items-center text-lg font-bold text-gray-900 dark:text-white">
+                <span>Totaal kosten:</span>
+                <span id="totalCost" class="text-green-600 dark:text-green-400">€0.00</span>
+            </div>
+            <div class="flex justify-between items-center text-lg font-bold mt-2 text-gray-900 dark:text-white">
+                <span>Totale besparing:</span>
+                <span id="totalSavings" class="text-red-600 dark:text-red-400">€0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lijst Delen -->
+    <div class="box mt-6 bg-gray-100 dark:bg-zinc-700 p-4 rounded-xl shadow-inner dark:shadow-none transition-colors duration-300">
+        <div id="collapsible-header" class="toggle-section-btn text-xl font-semibold text-gray-900 dark:text-white">
+            <span>Lijst Delen</span>
+            <i id="toggle-arrow" class="fas fa-chevron-right toggle-arrow"></i>
+        </div>
+        <div id="collapsible-content" class="mt-4 hidden">
+            <div class="mb-4">
+                <h3 class="text-md font-semibold mb-2 text-gray-900 dark:text-white">Deel uw lijst</h3>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-900 dark:text-white">Uw gedeelde ID:</p>
+                    <div class="flex items-center space-x-2 bg-gray-200 dark:bg-zinc-600 rounded-md p-1 px-2 transition-colors duration-300">
+                        <span id="shareListIdDisplay" class="text-xs font-mono text-gray-900 dark:text-white">Laden...</span>
+                        <button id="copyShareIdButton" class="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-md font-semibold mb-2 text-gray-900 dark:text-white">Voeg een gedeelde lijst toe</h3>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="joinListInput" placeholder="ID van de lijst" class="flex-1 p-3 border border-gray-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-zinc-800 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white transition-colors duration-300">
+                    <button id="joinListBtn" class="bg-indigo-600 text-white p-3 rounded-lg font-medium hover:bg-indigo-700 transition duration-300 ease-in-out">Toevoegen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsnugzebuYKcRnryGFK0SyS9bvCDtlu8o",
+      authDomain: "prijsenproducttracker.firebaseapp.com",
+      projectId: "prijsenproducttracker",
+      storageBucket: "prijsenproducttracker.firebasestorage.app",
+      messagingSenderId: "696196733084",
+      appId: "1:696196733084:web:842f7f2880974a2b58b559",
+      measurementId: "G-1HGMC7VGXD"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+    setLogLevel('debug');
+
+    const appId = firebaseConfig.appId;
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let auth;
+    let db;
+    let userId;
+    let currentShoppingListId;
+    let unsubscribeProducts;
+
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    window.onload = function() {
+        const html = document.documentElement;
+        const themeIcon = document.getElementById('themeIcon');
+        const toggleThemeText = document.getElementById('toggleThemeText');
+        const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+        const loggedInSection = document.getElementById('logged-in-section');
+        const loggedOutSection = document.getElementById('logged-out-section');
+        const logInBtn = document.getElementById('logInBtn');
+        const logOutBtn = document.getElementById('logOutBtn');
+        const productInput = document.getElementById('productInput');
+        const addProductBtn = document.getElementById('addProductBtn');
+        const myProductsList = document.getElementById('myProductsList');
+        const shoppingListContainer = document.getElementById('shoppingListContainer');
+        const shoppingList = document.getElementById('shoppingList');
+        const totalCostSpan = document.getElementById('totalCost');
+        const totalSavingsSpan = document.getElementById('totalSavings');
+        const lastUpdatedSpan = document.getElementById('lastUpdated');
+        const clearShoppingListBtn = document.getElementById('clearShoppingListBtn');
+        const joinListBtn = document.getElementById('joinListBtn');
+        const joinListInput = document.getElementById('joinListInput');
+        const shareListIdDisplay = document.getElementById('shareListIdDisplay');
+        const copyShareIdButton = document.getElementById('copyShareIdButton');
+        const collapsibleHeader = document.getElementById('collapsible-header');
+        const collapsibleContent = document.getElementById('collapsible-content');
+        const toggleArrow = document.getElementById('toggle-arrow');
+        const boxes = document.querySelectorAll('.box');
+
+        const USER_COLLECTION = `artifacts/${appId}/users`;
+        const PUBLIC_COLLECTION = `artifacts/${appId}/public/data/shared_lists`;
+
+        const showMessage = (message) => {
+            const messageBoxOverlay = document.createElement('div');
+            messageBoxOverlay.id = 'messageBoxOverlay';
+            messageBoxOverlay.className = 'message-box-overlay';
+
+            const messageBox = document.createElement('div');
+            messageBox.id = 'messageBox';
+            messageBox.className = 'message-box';
+
+            messageBox.innerHTML = `
+                <p id="messageBoxContent">${message}</p>
+                <button id="messageBoxOkBtn" class="mt-4 bg-indigo-600 text-white p-2 px-4 rounded-lg font-medium hover:bg-indigo-700 transition duration-300 ease-in-out">OK</button>
+            `;
+
+            document.body.appendChild(messageBoxOverlay);
+            document.body.appendChild(messageBox);
+
+            requestAnimationFrame(() => {
+                messageBoxOverlay.classList.add('show');
+                messageBox.classList.add('show');
+            });
+
+            const closeMessageBox = () => {
+                messageBox.classList.remove('show');
+                messageBoxOverlay.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(messageBox);
+                    document.body.removeChild(messageBoxOverlay);
+                }, 300);
+            };
+
+            document.getElementById('messageBoxOkBtn').addEventListener('click', closeMessageBox);
+            messageBoxOverlay.addEventListener('click', closeMessageBox);
+        };
+
+        const applyTheme = (isDark) => {
+            if (isDark) {
+                html.classList.add('dark');
+                toggleThemeText.textContent = 'Licht';
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            } else {
+                html.classList.remove('dark');
+                html.classList.add('light'); // Ensure light class is present
+                toggleThemeText.textContent = 'Donker';
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            }
+        };
+
+        const initialTheme = localStorage.getItem('theme');
+        if (initialTheme === 'dark' || (!initialTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            applyTheme(true);
+        } else {
+            applyTheme(false);
+        }
+
+        toggleThemeBtn.addEventListener('click', () => {
+            const isDark = html.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(!isDark);
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                loggedInSection.style.display = 'flex';
+                loggedOutSection.style.display = 'none';
+                console.log("User authenticated:", userId);
+                currentShoppingListId = userId;
+                shareListIdDisplay.textContent = userId;
+                startListeningForProducts(currentShoppingListId);
+                checkAndUpdatePrices();
+            } else {
+                loggedInSection.style.display = 'none';
+                loggedOutSection.style.display = 'flex';
+                console.log("No user signed in.");
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                }
+            }
+        });
+
+        logInBtn.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Google sign-in failed:", error);
+                showMessage("Inloggen met Google mislukt. Probeer het opnieuw.");
+            }
+        });
+
+        logOutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log("User signed out.");
+            } catch (error) {
+                console.error("Sign out failed:", error);
+            }
+        });
+
+        const startListeningForProducts = (listId) => {
+            if (unsubscribeProducts) {
+                unsubscribeProducts();
+            }
+            if (!db || !listId) {
+                console.error("Firestore of lijst-ID is niet klaar.");
+                return;
+            }
+
+            const isUserList = listId === userId;
+            const collectionPath = isUserList ? `${USER_COLLECTION}/${listId}/products` : `${PUBLIC_COLLECTION}/${listId}/products`;
+
+            const q = query(collection(db, collectionPath));
+            unsubscribeProducts = onSnapshot(q, (snapshot) => {
+                let items = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    items.push(data);
+                });
+                renderMyProducts(items);
+                renderShoppingList(items);
+            }, (error) => {
+                console.error("Fout in snapshot listener:", error);
+            });
+        };
+
+        const checkAndUpdatePrices = async () => {
+            if (!db || !userId) return;
+
+            const q = query(collection(db, `${USER_COLLECTION}/${userId}/products`));
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            let updateNeeded = false;
+            const now = new Date().getTime();
+            const oneDayInMs = 24 * 60 * 60 * 1000;
+
+            for (const docSnapshot of querySnapshot.docs) {
+                const product = docSnapshot.data();
+                const lastUpdatedTimestamp = product.lastUpdated;
+
+                if (!lastUpdatedTimestamp || (now - lastUpdatedTimestamp) > oneDayInMs) {
+                    updateNeeded = true;
+                    try {
+                        const response = await fetch('/get_offers', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ product: product.name })
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            batch.update(docSnapshot.ref, {
+                                offers: data.offers,
+                                lastUpdated: now
+                            });
+                        } else {
+                            console.error(`Fout bij bijwerken van ${product.name}: ${data.error}`);
+                        }
+                    } catch (error) {
+                        console.error("Fout bij ophalen prijzen:", error);
+                    }
+                }
+            }
+
+            if (updateNeeded) {
+                await batch.commit();
+                showMessage("De prijzen zijn automatisch bijgewerkt.");
+            }
+        };
+
+        const renderMyProducts = (products) => {
+            myProductsList.innerHTML = '';
+            products.forEach(product => {
+                const li = document.createElement('li');
+                li.className = 'my-4 p-4 rounded-lg shadow-md dark:shadow-none flex flex-col md:flex-row items-start md:items-center justify-between transition-all duration-300 transform hover:scale-[1.02] bg-white dark:bg-zinc-800';
+                li.innerHTML = `
+                    <div class="flex-1 min-w-0 mb-2 md:mb-0">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" data-product-id="${product.id}" class="h-4 w-4 text-indigo-600 rounded">
+                            <span class="font-semibold text-lg text-gray-900 dark:text-white">${product.name}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-end gap-2 md:gap-4">
+                        <button class="fetch-prices-btn text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200" data-product-id="${product.id}">
+                            <i class="fas fa-sync-alt"></i> Prijzen ophalen
+                        </button>
+                        <button class="delete-product-btn text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600 transition-colors duration-200" data-product-id="${product.id}">
+                            <i class="fas fa-trash-alt"></i> Verwijderen
+                        </button>
+                    </div>
+                `;
+                const checkbox = li.querySelector('input[type="checkbox"]');
+                checkbox.checked = product.onShoppingList || false;
+
+                const deleteButton = li.querySelector('.delete-product-btn');
+                deleteButton.addEventListener('click', async () => {
+                    await deleteDoc(doc(db, `${USER_COLLECTION}/${userId}/products`, product.id));
+                });
+
+                const fetchPricesButton = li.querySelector('.fetch-prices-btn');
+                fetchPricesButton.addEventListener('click', async () => {
+                    const loadingIndicator = document.createElement('span');
+                    loadingIndicator.className = 'ml-2 text-sm text-gray-500 dark:text-gray-400';
+                    loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bezig...';
+                    fetchPricesButton.parentNode.insertBefore(loadingIndicator, fetchPricesButton.nextSibling);
+
+                    try {
+                        const response = await fetch('/get_offers', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ product: product.name })
+                        });
+
+                        const data = await response.json();
+                        if (response.ok) {
+                            await updateDoc(doc(db, `${USER_COLLECTION}/${userId}/products`, product.id), {
+                                offers: data.offers,
+                                lastUpdated: new Date().getTime()
+                            });
+                        } else {
+                            throw new Error(data.error || 'Er is een fout opgetreden');
+                        }
+                    } catch (error) {
+                        console.error("Fout bij ophalen prijzen:", error);
+                        showMessage('Fout bij het ophalen van prijzen: ' + error.message);
+                    } finally {
+                        loadingIndicator.remove();
+                    }
+                });
+
+                checkbox.addEventListener('change', async (e) => {
+                    await updateDoc(doc(db, `${USER_COLLECTION}/${userId}/products`, product.id), {
+                        onShoppingList: e.target.checked
+                    });
+                });
+
+                myProductsList.appendChild(li);
+            });
+        };
+
+        const renderShoppingList = (products) => {
+            shoppingList.innerHTML = '';
+            let totalCost = 0;
+            let totalSavings = 0;
+            let foundItems = 0;
+
+            products.forEach(product => {
+                if (product.onShoppingList) {
+                    const bestOffer = product.offers ? product.offers.reduce((best, current) => current.price < best.price ? current : best, { price: Infinity }) : null;
+                    const bestOfferFound = bestOffer && bestOffer.price !== Infinity;
+
+                    const li = document.createElement('li');
+                    li.className = 'p-4 rounded-lg shadow-sm dark:shadow-none mb-4 bg-white dark:bg-zinc-800 transition-colors duration-300';
+                    li.innerHTML = `
+                        <div class="flex items-center space-x-3 mb-2">
+                            <input type="checkbox" data-product-id="${product.id}" class="h-4 w-4 text-indigo-600 rounded">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-base text-gray-900 dark:text-white">${product.name}</h4>
+                                ${bestOfferFound ? `
+                                    <div class="text-sm mt-1">
+                                        <p class="flex items-center text-gray-600 dark:text-gray-400">
+                                            <i class="fas fa-store mr-2"></i> ${bestOffer.store}
+                                        </p>
+                                        <p class="flex items-center text-green-600 dark:text-green-400 font-bold mt-1">
+                                            <i class="fas fa-euro-sign mr-2"></i> ${bestOffer.price.toFixed(2)}
+                                            ${bestOffer.deal === '2e halve prijs' ? '<i class="fas fa-tag ml-2 text-yellow-500" title="2e halve prijs"></i>' : ''}
+                                            ${bestOffer.deal === '1+1 gratis' ? '<i class="fas fa-gift ml-2 text-blue-500" title="1+1 gratis"></i>' : ''}
+                                        </p>
+                                    </div>
+                                ` : `<p class="text-gray-500 dark:text-gray-400 mt-1">Product niet gevonden</p>`}
+                            </div>
+                        </div>
+                    `;
+                    const checkbox = li.querySelector('input[type="checkbox"]');
+                    checkbox.checked = product.bought || false;
+
+                    if (bestOfferFound) {
+                        totalCost += bestOffer.price;
+                        foundItems++;
+                    }
+                    if (bestOffer && bestOffer.original_price) {
+                        totalSavings += (bestOffer.original_price - bestOffer.price);
+                    }
+
+                    checkbox.addEventListener('change', async (e) => {
+                        await updateDoc(doc(db, `${USER_COLLECTION}/${userId}/products`, product.id), {
+                            bought: e.target.checked
+                        });
+                    });
+
+                    shoppingList.appendChild(li);
+                }
+            });
+
+            const lastUpdated = products[0]?.lastUpdated || null;
+            if (lastUpdated) {
+                const date = new Date(lastUpdated);
+                const formattedDate = date.toLocaleString('nl-NL', {
+                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                lastUpdatedSpan.textContent = `Laatst bijgewerkt: ${formattedDate}`;
+                lastUpdatedSpan.style.display = 'block';
+            } else {
+                lastUpdatedSpan.style.display = 'none';
+            }
+
+            totalCostSpan.textContent = `€${totalCost.toFixed(2)}`;
+            totalSavingsSpan.textContent = `€${totalSavings.toFixed(2)}`;
+            shoppingListContainer.style.display = foundItems > 0 ? 'block' : 'none';
+        };
+
+        addProductBtn.addEventListener('click', async () => {
+            const productName = productInput.value.trim();
+            if (productName && userId && db) {
+                try {
+                    await addDoc(collection(db, `${USER_COLLECTION}/${userId}/products`), {
+                        name: productName,
+                        onShoppingList: false,
+                        bought: false,
+                        offers: [],
+                        lastUpdated: null,
+                        createdAt: new Date()
+                    });
+                    productInput.value = '';
+                } catch (e) {
+                    console.error("Fout bij toevoegen product:", e);
+                    showMessage("Er is een fout opgetreden bij het toevoegen van het product.");
+                }
+            } else {
+                showMessage("Voer een productnaam in en zorg dat u bent ingelogd.");
+            }
+        });
+
+        productInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addProductBtn.click();
+            }
+        });
+
+        clearShoppingListBtn.addEventListener('click', async () => {
+            const q = query(collection(db, `${USER_COLLECTION}/${userId}/products`), where("onShoppingList", "==", true));
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+
+            querySnapshot.forEach((doc) => {
+                batch.update(doc.ref, {
+                    onShoppingList: false,
+                    bought: false
+                });
+            });
+
+            await batch.commit();
+            showMessage("Boodschappenlijst is geleegd.");
+        });
+
+        copyShareIdButton.addEventListener('click', () => {
+            const text = shareListIdDisplay.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = copyShareIdButton.innerHTML;
+                copyShareIdButton.innerHTML = `<i class="fas fa-check"></i> Gekopieerd!`;
+                setTimeout(() => {
+                    copyShareIdButton.innerHTML = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Fout bij kopiëren: ', err);
+                showMessage("Kon niet kopiëren naar klembord.");
+            });
+        });
+
+        joinListBtn.addEventListener('click', async () => {
+            const listIdToJoin = joinListInput.value.trim();
+            if (!listIdToJoin) {
+                showMessage('Voer een ID in om een lijst te bekijken.');
+                return;
+            }
+
+            try {
+                // Check if the list exists in the public collection
+                const listDocRef = doc(db, PUBLIC_COLLECTION, listIdToJoin);
+                const listSnap = await getDoc(listDocRef);
+
+                if (listSnap.exists()) {
+                    currentShoppingListId = listIdToJoin;
+                    shareListIdDisplay.textContent = listIdToJoin;
+                    startListeningForProducts(currentShoppingListId);
+                    showMessage(`Succesvol verbonden met de gedeelde lijst: ${listIdToJoin}`);
+                } else {
+                    showMessage('Lijst niet gevonden. Controleer de ID.');
+                }
+            } catch (e) {
+                console.error('Fout bij het laden van de gedeelde lijst:', e);
+                showMessage('Er is een fout opgetreden bij het laden van de lijst.');
+            }
+        });
+
+        collapsibleHeader.addEventListener('click', () => {
+            const isCollapsed = collapsibleContent.classList.contains('hidden');
+            if (isCollapsed) {
+                collapsibleContent.classList.remove('hidden');
+                toggleArrow.classList.add('open');
+            } else {
+                collapsibleContent.classList.add('hidden');
+                toggleArrow.classList.remove('open');
+            }
+        });
+    }
+</script>
+</body>
+</html>
